@@ -86,3 +86,15 @@ finance_chain = (
 )
 
 
+# 3. 기타
+general_chain = (
+    PromptTemplate.from_template(
+        """Respond to the following question concisely:
+
+Question: {question}
+Answer:"""
+    )
+    # OpenAI의 LLM을 사용합니다.
+    | ChatOpenAI(model="gpt-4o-mini")
+)
+
