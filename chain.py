@@ -48,3 +48,41 @@ Answer:"""
     | ChatOpenAI(model="gpt-4o-mini")
 )
 
+# 2. 벡터 DB 서치
+embeddings = OpenAIEmbeddings()
+
+vectorstore = Milvus(
+    # documents=docs,
+    embedding_function=embeddings,
+    connection_args={
+        "uri": "http://localhost:19530",
+    },
+    # drop_old=True,  # Drop the old Milvus collection if it exists
+)
+PROMPT_TEMPLATE = """You are an expert in finance. \
+Always answer questions starting with "전문가에 따르면..". \
+Respond to the following question based the context and statistical information when possible:
+Context: {context}
+Question: {question}
+Answer:"""
+
+prompt = PromptTemplate(
+    template=PROMPT_TEMPLATE, input_variables=["context", "question"]
+)
+retriever1 = vectorstore.as_retriever(search_kwargs={"k": 3})
+
+def format_docs(docs):
+    return "\n\n".join(doc.page_content for doc in docs)
+
+context_chain = RunnableLambda(lambda x: x["question"]) | retriever | format_docs
+
+finance_chain = (
+    {"context": context_chain , 
+    "question": RunnablePassthrough()}
+    # OpenAI의 LLM을 사용합니다.
+    | prompt
+    | ChatOpenAI(model="gpt-4o-mini")
+    | StrOutputParser()
+)
+
+
