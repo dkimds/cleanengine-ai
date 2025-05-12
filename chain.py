@@ -120,3 +120,21 @@ full_chain = (
     | StrOutputParser()
 )
 
+app = FastAPI()
+
+# 비동기 인보크
+@app.get("/async/chat")
+async def async_chat(query: str = Query(None, min_length=3, max_length=50)):
+    response = await full_chain.ainvoke({"question": query})
+    return response
+# @app.get("/streaming_async/chat")
+# async def streaming_async(query: str = Query(None, min_length=3, max_length=50)):
+#     async def event_stream():
+#         try:
+#             async for chunk in full_chain.astream({"question": query}):
+#                 if len(chunk) > 0:
+#                     yield f"data: {chunk}\n\n"
+#         except Exception as e:
+#             yield f"data: {str(e)}\n\n"
+
+#     return StreamingResponse(event_stream(), media_type="text/event-stream")
