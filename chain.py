@@ -30,3 +30,21 @@ chain = (
     | ChatOpenAI(model="gpt-4o-mini")
     | StrOutputParser()  # 문자열 출력 파서를 사용합니다.
 )
+# 1. 웹서치
+retriever = TavilySearchAPIRetriever(k=3)
+
+news_chain = (
+    {"question": lambda x: x["question"],
+    "context": lambda x: retriever.invoke(x["question"])}
+    | PromptTemplate.from_template(
+        """You are an HUMINT in news. \
+Always answer questions starting with "최신 데이터에 따르면..". \
+Respond to the following question based on the context provided:
+Context: {context}
+Question: {question}
+Answer:"""
+    )
+    # OpenAI의 LLM을 사용합니다.
+    | ChatOpenAI(model="gpt-4o-mini")
+)
+
