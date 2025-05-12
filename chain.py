@@ -39,6 +39,8 @@ news_chain = (
     | PromptTemplate.from_template(
         """You are an HUMINT in news. \
 Always answer questions starting with "최신 데이터에 따르면..". \
+When you work with numbers, be mindful of units.\
+If you don't know the answer, just say that you don't know\
 Respond to the following question based on the context provided:
 Context: {context}
 Question: {question}
