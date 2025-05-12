@@ -98,3 +98,25 @@ Answer:"""
     | ChatOpenAI(model="gpt-4o-mini")
 )
 
+# 4. 경로 설정
+def route(info):
+    topic = info["topic"].strip()
+    if topic == "최신소식":
+        return news_chain
+    elif topic == "전문지식":
+        return finance_chain  # 원래 코드에선 'expertise_chain' → 오타 수정
+    else:
+        return general_chain
+
+
+from langchain_core.runnables import RunnableLambda
+
+full_chain = (
+    {"topic": chain, "question": lambda x: x["question"]}
+    | RunnableLambda(
+        # 경로를 지정하는 함수를 인자로 전달합니다.
+        route
+    )
+    | StrOutputParser()
+)
+
