@@ -92,14 +92,14 @@ finance_chain = (
 general_chain = (
     PromptTemplate.from_template(
         """Respond to the following question concisely:
-
-Question: {question}
-Answer:
 If the question is not about expert knowledge or recent events, reply:
 
 "도와드리지 못해서 죄송합니다. 저는 비트코인 관련 전문지식과 최신소식만 답변드릴 수 있습니다."
 
-Only respond with factual, concise answers supported by the context when applicable."""
+Only respond with factual, concise answers supported by the context when applicable.
+Question: {question}
+Answer:
+"""
     )
     # OpenAI의 LLM을 사용합니다.
     | ChatOpenAI(model="gpt-4o-mini")
