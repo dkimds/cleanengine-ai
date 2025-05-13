@@ -94,7 +94,12 @@ general_chain = (
         """Respond to the following question concisely:
 
 Question: {question}
-Answer:"""
+Answer:
+If the question is not about expert knowledge or recent events, reply:
+
+"도와드리지 못해서 죄송합니다. 저는 비트코인 관련 전문지식과 최신소식만 답변드릴 수 있습니다."
+
+Only respond with factual, concise answers supported by the context when applicable."""
     )
     # OpenAI의 LLM을 사용합니다.
     | ChatOpenAI(model="gpt-4o-mini")
@@ -126,8 +131,8 @@ app = FastAPI()
 
 # 비동기 인보크
 @app.get("/async/chat")
-async def async_chat(query: str = Query(None, min_length=3, max_length=50)):
-    response = await full_chain.ainvoke({"question": query})
+async def async_chat(question: str = Query(None, min_length=3, max_length=50)):
+    response = await full_chain.ainvoke({"question": question})
     return response
 # @app.get("/streaming_async/chat")
 # async def streaming_async(query: str = Query(None, min_length=3, max_length=50)):
