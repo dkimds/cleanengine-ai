@@ -5,3 +5,5 @@ __pycache__
 /volumes
 .env
 *.pdf
+user.yaml
+embedEtcd.yaml

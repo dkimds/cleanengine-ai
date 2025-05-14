@@ -1,6 +1,6 @@
-name: Deploy remix app
+name: Deploy fastAPI app
 
-run-name: Deploy remix app to docker hub by ${{github.actor}}
+run-name: Deploy fastAPI app to docker hub by ${{github.actor}}
 
 on:
   push:

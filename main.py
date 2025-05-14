@@ -2,11 +2,10 @@
 from dotenv import load_dotenv
 from fastapi import FastAPI, Query
 from fastapi.responses import StreamingResponse
-from langchain_openai import OpenAIEmbeddings
+# AI 기능을 위한 프레임워크
+from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_milvus import Milvus
 from langchain_core.runnables import RunnablePassthrough, RunnableLambda
-
-from langchain_openai import ChatOpenAI
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import PromptTemplate
 from langchain_community.retrievers.tavily_search_api import TavilySearchAPIRetriever
@@ -111,7 +110,7 @@ def route(info):
     if topic == "최신소식":
         return news_chain
     elif topic == "전문지식":
-        return finance_chain  # 원래 코드에선 'expertise_chain' → 오타 수정
+        return finance_chain 
     else:
         return general_chain
 
