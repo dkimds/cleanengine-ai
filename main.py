@@ -110,7 +110,7 @@ def route(info):
     if topic == "최신소식":
         return news_chain
     elif topic == "전문지식":
-        return finance_chain  # 원래 코드에선 'expertise_chain' → 오타 수정
+        return finance_chain 
     else:
         return general_chain
 
