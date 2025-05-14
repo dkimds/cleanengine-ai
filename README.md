@@ -58,7 +58,7 @@ pip install -r requirements.txt
 ### AI 서버 실행
 코드 수정하면 바로 해당사항 적용
 ```sh
-uvicorn chain:app --reload
+uvicorn main:app --reload
 ```
 ## 기타
 `agent.py`: main.py 같은 기능의 LangGraph 프로토타입
