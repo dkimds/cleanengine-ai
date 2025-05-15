@@ -1,10 +1,10 @@
 # cleanengine-ai
 구름 프로펙트 풀스택 과정 2기 1조
 ## 개요
-OpenAI API 기반으로 암호화페 모의투자를 도와주는 챗봇
+OpenAI API 기반으로 암호화폐 모의투자를 도와주는 챗봇(gpt-4o-mini) 
 ### 기능
-- 코인 투자 전문지식 검색: Tavily Search API 활용
-- 코인 관련 최신소식 검색: Milvus 벡터 데이터베이스 활용
+- 코인 투자 최신소식 검색: Tavily Search API 활용
+- 코인 관련 전문지식 검색: Milvus 벡터 데이터베이스 활용
 - 투자와 무관한 질문 거절: 프롬프트 엔지니어링
 ### 코드 구조
 ```python
@@ -37,14 +37,14 @@ def route(info):
     if topic == "최신소식":
         return news_chain
     elif topic == "전문지식":
-        return finance_chain  # 원래 코드에선 'expertise_chain' → 오타 수정
+        return finance_chain  
     else:
         return general_chain
 
 # 5. FastAPI 비동기 호출
 ```
 ## 사용법
-본 문서는 로컬 실행을 기준으로 작성하였습니다.
+본 문서는 macOS/Linux 로컬 실행을 기준으로 작성하였습니다.
 ### 벡터 DB 설치
 아래 커맨드로 Milvus를 도커 콘테이너로 설치
 ```sh
