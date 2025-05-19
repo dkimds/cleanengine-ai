@@ -58,6 +58,7 @@ vectorstore = Milvus(
     connection_args={
         "uri": "http://localhost:19530",
     },
+    collection_name="langchain_example",
     # drop_old=True,  # Drop the old Milvus collection if it exists
 )
 PROMPT_TEMPLATE = """You are an expert in finance. \
