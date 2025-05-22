@@ -1,7 +1,9 @@
 # API 키를 환경변수로 관리하기 위한 설정 파일
 from dotenv import load_dotenv
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, BackgroundTasks
 from fastapi.responses import StreamingResponse
+from datetime import datetime
+
 # AI 기능을 위한 프레임워크
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_milvus import Milvus
@@ -9,6 +11,27 @@ from langchain_core.runnables import RunnablePassthrough, RunnableLambda
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import PromptTemplate
 from langchain_community.retrievers.tavily_search_api import TavilySearchAPIRetriever
+
+# 랭체인 트래킹
+import mlflow
+mlflow.set_tracking_uri(uri="http://127.0.0.1:8080")
+
+mlflow.set_experiment("langchain")
+
+# Enable MLflow tracing
+mlflow.langchain.autolog()
+
+def log_to_mlflow(question: str, response: str, start_time: datetime):
+    try:
+        with mlflow.start_run():
+            mlflow.set_tag("endpoint", "/async/chat")
+            mlflow.log_param("question", question)
+            # mlflow.log_text(response, "response.txt")
+            mlflow.log_metric("response_length", len(response))
+            mlflow.log_metric("duration_seconds", (datetime.now() - start_time).total_seconds())
+    except Exception as e:
+        # 에러가 나도 main 흐름에는 영향 안 줌
+        print(f"[MLflow Logging Error] {e}")
 
 # API 키 정보 로드
 load_dotenv()
@@ -131,8 +154,17 @@ app = FastAPI()
 
 # 비동기 인보크
 @app.get("/async/chat")
-async def async_chat(question: str = Query(None, min_length=3, max_length=50)):
+async def async_chat(
+    question: str = Query(..., min_length=3, max_length=50),
+    background_tasks: BackgroundTasks = None
+):
+    start_time = datetime.now()
+
     response = await full_chain.ainvoke({"question": question})
+
+    # 로깅은 백그라운드로 넘김
+    background_tasks.add_task(log_to_mlflow, question, response, start_time)
+
     return response
 # @app.get("/streaming_async/chat")
 # async def streaming_async(query: str = Query(None, min_length=3, max_length=50)):
