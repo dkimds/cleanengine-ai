@@ -1,9 +1,13 @@
 from prefect import flow, task
-import feedparser
-from langchain_openai import OpenAIEmbeddings
-from pymilvus import connections, Collection, CollectionSchema, FieldSchema, DataType, utility
-import hashlib
 
+import hashlib
+import feedparser
+
+from langchain_openai import OpenAIEmbeddings
+from langchain.schema import Document
+from pymilvus import connections, Collection, CollectionSchema, FieldSchema, DataType, utility
+
+ 
 # --- Task 1: 데이터 수집 ---
 @task
 def extract():
@@ -31,13 +35,7 @@ def transform(articles):
 
 # --- Task 3: Milvus에 저장 ---
 @task
-
-@task
 def load(documents):
-    from langchain.schema import Document
-    import hashlib
-    from langchain.embeddings import OpenAIEmbeddings
-
     embedder = OpenAIEmbeddings()
     connections.connect("default", host="localhost", port="19530")
 
