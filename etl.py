@@ -84,4 +84,4 @@ def etl_pipeline():
 
 # 실행
 if __name__ == "__main__":
-    etl_pipeline()
+    etl_pipeline.serve(name="coindesk_etl", cron="0 8 * * *")
