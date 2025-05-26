@@ -6,7 +6,7 @@ OpenAI API 기반으로 암호화폐 모의투자를 도와주는 챗봇(gpt-4o-
 - 코인 투자 최신소식 검색: Tavily Search API 활용
 - 코인 관련 전문지식 검색: Milvus 벡터 데이터베이스 활용
 - 투자와 무관한 질문 거절: 프롬프트 엔지니어링
-### 코드 구조
+### 코드 구조(main.py)
 ```python
 # API 키 정보 로드
 prompt = PromptTemplate.from_template(
@@ -40,7 +40,7 @@ def route(info):
         return finance_chain  
     else:
         return general_chain
-
+...
 # 5. FastAPI 비동기 호출
 ```
 ## 사용법
@@ -59,6 +59,14 @@ pip install -r requirements.txt
 코드 수정하면 바로 해당사항 적용
 ```sh
 uvicorn main:app --reload
+```
+### 로깅 및 모니터링
+```sh
+mlflow server --host 127.0.0.1 --port 8080
+```
+### 외부 데이터 수집 스케줄링
+```sh
+python etl.py
 ```
 ## 기타
 `agent.py`: main.py 같은 기능의 LangGraph 프로토타입
