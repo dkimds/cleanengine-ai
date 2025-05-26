@@ -55,14 +55,14 @@ bash standalone_embed.sh start
 ```sh
 pip install -r requirements.txt
 ```
+### 로깅 및 모니터링
+```sh
+mlflow server --host 0.0.0.0
+```
 ### AI 서버 실행
 코드 수정하면 바로 해당사항 적용
 ```sh
 uvicorn main:app --reload
-```
-### 로깅 및 모니터링
-```sh
-mlflow server --host 127.0.0.1 --port 8080
 ```
 ### 외부 데이터 수집 스케줄링
 ```sh
