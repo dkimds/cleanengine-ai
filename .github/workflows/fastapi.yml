@@ -40,6 +40,8 @@ jobs:
           port: ${{ secrets.AI_SERVER_PORT }}
           script: |
             cd ~/chatbot
+            sudo chmod +x ./dependency.sh
+            ./dependency.sh
       #   uses: actions/checkout@v4
       # - name: Create env file
       #   run: |
