@@ -6,6 +6,7 @@ import feedparser
 from langchain_openai import OpenAIEmbeddings
 from langchain.schema import Document
 from pymilvus import connections, Collection, CollectionSchema, FieldSchema, DataType, utility
+from pymilvus import MilvusClient
 
  
 # --- Task 1: 데이터 수집 ---
@@ -36,9 +37,8 @@ def transform(articles):
 # --- Task 3: Milvus에 저장 ---
 @task
 def load(documents):
+    client = MilvusClient("./milvus_demo.db")
     embedder = OpenAIEmbeddings()
-    connections.connect("default", host="localhost", port="19530")
-
     collection_name = "coindesk_articles"
 
     if collection_name not in utility.list_collections():
