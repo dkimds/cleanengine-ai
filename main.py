@@ -85,7 +85,7 @@ try:
         connection_args={
             "uri": "./milvus_demo.db",
         },
-        collection_name="langchain_example",
+        collection_name="coindesk_articles",
     )
     print("Milvus 연결 성공")
     use_milvus = True
