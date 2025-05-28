@@ -1,7 +1,7 @@
 pip install -r requirements.txt
 
 echo "MLflow 서버 시작 중..."
-nohup mlflow server --host 0.0.0.0 > mlflow.log 2>&1 &
+nohup mlflow server --host 127.0.0.1 --port 9000 > mlflow.log 2>&1 &
 mlflow_pid=$!
 
 # MLflow 서버가 시작될 때까지 대기
