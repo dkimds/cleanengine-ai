@@ -8,11 +8,21 @@ on:
       - main
 jobs:
   deploy:
-    runs-on: ubuntu-latest
-    env:
-      HUSKY: 0
+    runs-on: ubuntu-latest      
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Remove old files
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.AI_SERVER_HOST }}
+          username: ${{ secrets.AI_SERVER_USERNAME }}
+          key: ${{ secrets.AI_SERVER_KEY }}
+          port: ${{ secrets.AI_SERVER_PORT }}
+          script: |
+            echo "기존 "
+            rm -rf ~/chatbot || true
+            mkdir ~/chatbot
       - name: Copy files via SSH
         uses: appleboy/scp-action@v1
         with:
@@ -21,7 +31,16 @@ jobs:
           key: ${{ secrets.AI_SERVER_KEY }}
           port: ${{ secrets.AI_SERVER_PORT }}
           source: "."
-          target: "/chatbot"  
+          target: "/chatbot"
+      - name: Start chatbot service
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.AI_SERVER_HOST }}
+          username: ${{ secrets.AI_SERVER_USERNAME }}
+          key: ${{ secrets.AI_SERVER_KEY }}
+          port: ${{ secrets.AI_SERVER_PORT }}
+          script: |
+            cd ~/chatbot
       #   uses: actions/checkout@v4
       # - name: Create env file
       #   run: |
