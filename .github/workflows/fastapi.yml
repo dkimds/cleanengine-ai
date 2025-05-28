@@ -20,6 +20,13 @@ jobs:
           key: ${{ secrets.AI_SERVER_KEY }}
           port: ${{ secrets.AI_SERVER_PORT }}
           script: |
+            # 기존 서비스 종료
+            echo "기존 MLflow 및 Uvicorn 서비스 종료 중..."
+            pkill -f "mlflow server" || echo "MLflow 프로세스가 없습니다"
+            pkill -f "uvicorn main:app" || echo "Uvicorn 프로세스가 없습니다"
+            sleep 2
+            
+            # 폴더 새로 생성
             rm -rf ~/chatbot || true
             mkdir ~/chatbot
       - name: Copy files via SSH
