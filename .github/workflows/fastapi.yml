@@ -45,25 +45,9 @@ jobs:
             pip install -r requirements.txt
             echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" > .env
             echo "TAVILY_API_KEY=${{ secrets.TAVILY_API_KEY }}" >> .env
+            echo "MILVUS_URI=http://localhost:19530" >> .env
             sudo chmod +x ./dependency.sh
             ./dependency.sh
-      - name: Verify server status
-        uses: appleboy/ssh-action@v1.2.2
-        with:
-          host: ${{ secrets.AI_SERVER_HOST }}
-          username: ${{ secrets.AI_SERVER_USERNAME }}
-          key: ${{ secrets.AI_SERVER_KEY }}
-          port: ${{ secrets.AI_SERVER_PORT }}
-          script: |
-            # 15초 대기 후 서버 상태 확인
-            sleep 15
-            echo "===== 서버 프로세스 확인 ====="
-            ps aux | grep uvicorn
-            ps aux | grep mlflow
-            echo "===== 포트 사용 현황 ====="
-            netstat -tulpn | grep 8000 || echo "8000번 포트가 사용되고 있지 않습니다."
-            echo "===== 서버 응답 테스트 ====="
-            curl -I http://localhost:8000 || echo "FastAPI 서버가 응답하지 않습니다."
       #   uses: actions/checkout@v4
       # - name: Create env file
       #   run: |

@@ -75,15 +75,25 @@ Answer:"""
 # 2. 벡터 DB 서치
 embeddings = OpenAIEmbeddings()
 
-vectorstore = Milvus(
-    # documents=docs,
-    embedding_function=embeddings,
-    connection_args={
-        "uri": "http://milvus-standalone:19530",
-    },
-    collection_name="langchain_example",
-    # drop_old=True,  # Drop the old Milvus collection if it exists
-)
+# Milvus 연결 추가 (연결 실패 시 예외 처리)
+try:
+    import os
+    milvus_uri = os.getenv("MILVUS_URI", "http://localhost:19530")
+    print(f"Milvus 연결 시도: {milvus_uri}")
+    
+    vectorstore = Milvus(
+        embedding_function=embeddings,
+        connection_args={
+            "uri": milvus_uri,
+        },
+        collection_name="langchain_example",
+    )
+    print("Milvus 연결 성공")
+    use_milvus = True
+except Exception as e:
+    print(f"Milvus 연결 실패: {e}")
+    print("주의: Milvus 연결 실패로 벡터 검색 기능을 사용할 수 없습니다.")
+    use_milvus = False
 PROMPT_TEMPLATE = """You are an expert in finance. \
 Always answer questions starting with "전문가에 따르면..". \
 Respond to the following question based the context and statistical information when possible:
