@@ -79,7 +79,7 @@ vectorstore = Milvus(
     # documents=docs,
     embedding_function=embeddings,
     connection_args={
-        "uri": "milvus-standalone:19530",
+        "uri": "tcp://milvus-standalone:19530",
     },
     collection_name="langchain_example",
     # drop_old=True,  # Drop the old Milvus collection if it exists
