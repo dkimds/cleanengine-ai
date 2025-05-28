@@ -40,6 +40,11 @@ jobs:
           port: ${{ secrets.AI_SERVER_PORT }}
           script: |
             cd ~/chatbot
+            python3 -m venv venv
+            source venv/bin/activate
+            pip install -r requirements.txt
+            echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" > .env
+            echo "TAVILY_API_KEY=${{ secrets.TAVILY_API_KEY }}" >> .env
             sudo chmod +x ./dependency.sh
             ./dependency.sh
       #   uses: actions/checkout@v4
