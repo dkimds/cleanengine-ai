@@ -20,12 +20,6 @@ jobs:
           key: ${{ secrets.AI_SERVER_KEY }}
           port: ${{ secrets.AI_SERVER_PORT }}
           script: |
-            # 기존 서비스 종료
-            echo "기존 MLflow 및 Uvicorn 서비스 종료 중..."
-            pkill -f "mlflow server" || echo "MLflow 프로세스가 없습니다"
-            pkill -f "uvicorn main:app" || echo "Uvicorn 프로세스가 없습니다"
-            sleep 2
-            
             # 폴더 새로 생성
             rm -rf ~/chatbot || true
             mkdir ~/chatbot
@@ -53,6 +47,8 @@ jobs:
             echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" > .env
             echo "TAVILY_API_KEY=${{ secrets.TAVILY_API_KEY }}" >> .env
             echo "MILVUS_URI=http://localhost:19530" >> .env
+            sudo chmod +x ./standalone_embed.sh
+            ./standalone_embed.sh
             sudo chmod +x ./dependency.sh
             ./dependency.sh
       #   uses: actions/checkout@v4
