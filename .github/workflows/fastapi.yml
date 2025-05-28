@@ -20,7 +20,6 @@ jobs:
           key: ${{ secrets.AI_SERVER_KEY }}
           port: ${{ secrets.AI_SERVER_PORT }}
           script: |
-            echo "기존 "
             rm -rf ~/chatbot || true
             mkdir ~/chatbot
       - name: Copy files via SSH
@@ -31,7 +30,7 @@ jobs:
           key: ${{ secrets.AI_SERVER_KEY }}
           port: ${{ secrets.AI_SERVER_PORT }}
           source: "."
-          target: "/chatbot"
+          target: "~/chatbot"
       - name: Start chatbot service
         uses: appleboy/ssh-action@v1.2.2
         with:
