@@ -77,13 +77,14 @@ embeddings = OpenAIEmbeddings()
 
 # Milvus 연결 추가 (연결 실패 시 예외 처리)
 try:
-    
+    import os
+    milvus_uri = os.getenv("MILVUS_URI", "http://localhost:19530")
     print(f"Milvus 연결 시도: {milvus_uri}")
     
     vectorstore = Milvus(
         embedding_function=embeddings,
         connection_args={
-            "uri": "./milvus_demo.db",
+            "uri": milvus_uri,
         },
         collection_name="coindesk_articles",
     )
