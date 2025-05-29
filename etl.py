@@ -93,5 +93,6 @@ def etl_pipeline():
 
 # 실행
 if __name__ == "__main__":
+    # 스케줄 만드려면 아래 코드 주석 해제하고 다음 줄 주석 설정
     # etl_pipeline.serve(name="coindesk_etl", cron="0 8 * * *")
     etl_pipeline()
