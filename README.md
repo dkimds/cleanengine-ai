@@ -57,7 +57,7 @@ pip install -r requirements.txt
 ```
 ### 로깅 및 모니터링
 ```sh
-mlflow server --host 0.0.0.0
+mlflow server --host 127.0.0.1 --port 5001
 ```
 ### AI 서버 실행
 코드 수정하면 바로 해당사항 적용
