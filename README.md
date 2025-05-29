@@ -44,31 +44,29 @@ def route(info):
 # 5. FastAPI 비동기 호출
 ```
 ## 사용법
-본 문서는 콘테이너 실행을 기준으로 작성하였습니다.
+본 문서는 macOS/Linux 로컬 실행을 기준으로 작성하였습니다.
 ### 벡터 DB 설치
 아래 커맨드로 Milvus를 도커 콘테이너로 설치
 ```sh
 bash standalone_embed.sh start
 ```
-### 도커 이미지 당겨오기
-AI 서비스용 Docker 이미지를 로컬에 다운로드
+### 파이썬 환경 설정
+가상환경에서 실행을 권장합니다.
 ```sh
-docker pull rlaqhguse/if-ai
+pip install -r requirements.txt
 ```
-### 도커 네트워크 설정(권장)
-Milvus와 AI 서비스가 통신할 수 있도록 같은 사용자 정의 네트워크에 연결
+### 로깅 및 모니터링
 ```sh
-docker network create milvus-net
-docker network connect milvus-net milvus-standalone
+mlflow server --host 0.0.0.0
 ```
-### 도커 콘테이너 실행
-AI 서비스 컨테이너를 Milvus와 같은 네트워크에 연결하여 실행
+### AI 서버 실행
+코드 수정하면 바로 해당사항 적용
 ```sh
-docker run -p 8000:8000 \
-  --network milvus-net \
-  --name if-ai rlaqhguse/if-ai
+uvicorn main:app --reload
+```
+### 외부 데이터 수집 스케줄링
+```sh
+python etl.py
 ```
 ## 기타
 `agent.py`: main.py 같은 기능의 LangGraph 프로토타입
-
-`etl.py`: 외부 데이터 수집 스케줄링
