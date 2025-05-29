@@ -66,8 +66,6 @@ AI 서비스 컨테이너를 Milvus와 같은 네트워크에 연결하여 실�
 ```sh
 docker run -p 8000:8000 \
   --network milvus-net \
-  -e OPENAI_API_KEY="sk-..." \
-  -e TAVILY_API_KEY="tvly-..." \
   --name if-ai rlaqhguse/if-ai
 ```
 ## 기타
