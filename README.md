@@ -44,7 +44,15 @@ def route(info):
 # 5. FastAPI 비동기 호출
 ```
 ## 사용법
-본 문서는 macOS/Linux 로컬 실행을 기준으로 작성하였습니다.
+본 문서는 Linux EC2 실행을 기준으로 작성하였습니다.
+### Docker 설치
+```sh
+sudo yum update -y
+sudo yum install docker -y
+docker -v
+sudo service docker start
+sudo usermod -aG docker ec2-user
+```
 ### 벡터 DB 설치
 아래 커맨드로 Milvus를 도커 콘테이너로 설치
 ```sh
