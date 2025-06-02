@@ -1,7 +1,6 @@
 # API 키를 환경변수로 관리하기 위한 설정 파일
 from dotenv import load_dotenv
 from fastapi import FastAPI, Query, BackgroundTasks
-from fastapi.responses import StreamingResponse
 from datetime import datetime
 
 # AI 기능을 위한 프레임워크
@@ -14,7 +13,7 @@ from langchain_community.retrievers.tavily_search_api import TavilySearchAPIRetr
 
 # 랭체인 트래킹
 import mlflow
-mlflow.set_tracking_uri(uri="http://127.0.0.1:9000")
+mlflow.set_tracking_uri(uri="http://127.0.0.1:5001")
 
 mlflow.set_experiment("langchain")
 
@@ -26,7 +25,7 @@ def log_to_mlflow(question: str, response: str, start_time: datetime):
         with mlflow.start_run():
             mlflow.set_tag("endpoint", "/async/chat")
             mlflow.log_param("question", question)
-            # mlflow.log_text(response, "response.txt")
+            mlflow.log_text(response, "response.txt")
             mlflow.log_metric("response_length", len(response))
             mlflow.log_metric("duration_seconds", (datetime.now() - start_time).total_seconds())
     except Exception as e:
@@ -86,7 +85,7 @@ try:
         connection_args={
             "uri": milvus_uri,
         },
-        collection_name="langchain_example",
+        collection_name="coindesk_articles",
     )
     print("Milvus 연결 성공")
     use_milvus = True
@@ -176,14 +175,4 @@ async def async_chat(
     background_tasks.add_task(log_to_mlflow, question, response, start_time)
 
     return response
-# @app.get("/streaming_async/chat")
-# async def streaming_async(query: str = Query(None, min_length=3, max_length=50)):
-#     async def event_stream():
-#         try:
-#             async for chunk in full_chain.astream({"question": query}):
-#                 if len(chunk) > 0:
-#                     yield f"data: {chunk}\n\n"
-#         except Exception as e:
-#             yield f"data: {str(e)}\n\n"
 
-#     return StreamingResponse(event_stream(), media_type="text/event-stream")

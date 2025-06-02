@@ -1,4 +1,5 @@
 from prefect import flow, task
+from dotenv import load_dotenv
 
 import hashlib
 import feedparser
@@ -6,8 +7,9 @@ import feedparser
 from langchain_openai import OpenAIEmbeddings
 from langchain.schema import Document
 from pymilvus import connections, Collection, CollectionSchema, FieldSchema, DataType, utility
+from pymilvus import MilvusClient
 
- 
+load_dotenv()
 # --- Task 1: 데이터 수집 ---
 @task
 def extract():
@@ -36,21 +38,28 @@ def transform(articles):
 # --- Task 3: Milvus에 저장 ---
 @task
 def load(documents):
-    embedder = OpenAIEmbeddings()
     connections.connect("default", host="localhost", port="19530")
-
+    embedder = OpenAIEmbeddings()
     collection_name = "coindesk_articles"
 
     if collection_name not in utility.list_collections():
         fields = [
             FieldSchema(name="id", dtype=DataType.VARCHAR, is_primary=True, auto_id=False, max_length=100),
-            FieldSchema(name="embedding", dtype=DataType.FLOAT_VECTOR, dim=1536),
+            FieldSchema(name="vector", dtype=DataType.FLOAT_VECTOR, dim=1536),
             FieldSchema(name="text", dtype=DataType.VARCHAR, max_length=65535),
         ]
-        schema = CollectionSchema(fields, description="Coindesk article embeddings")
-        Collection(name=collection_name, schema=schema)
+        schema = CollectionSchema(fields=fields, description="Coindesk article embeddings")
+        collection = Collection(name=collection_name, schema=schema)
 
-    collection = Collection(collection_name)
+        index_params = {
+            "index_type": "IVF_FLAT",  # 예: IVF_FLAT, HNSW, etc.
+            "metric_type": "L2",
+            "params": {"nlist": 128}
+        }
+        collection.create_index(field_name="vector", index_params=index_params)
+    else:
+        collection = Collection(collection_name)
+
     collection.load()
 
     new_ids, new_embeddings, new_texts = [], [], []
@@ -84,4 +93,6 @@ def etl_pipeline():
 
 # 실행
 if __name__ == "__main__":
-    etl_pipeline.serve(name="coindesk_etl", cron="0 8 * * *")
+    # 스케줄 만드려면 아래 코드 주석 해제하고 다음 줄 주석 설정
+    # etl_pipeline.serve(name="coindesk_etl", cron="0 8 * * *")
+    etl_pipeline()
