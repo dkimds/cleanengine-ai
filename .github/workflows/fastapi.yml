@@ -21,7 +21,7 @@ jobs:
           port: ${{ secrets.AI_SERVER_PORT }}
           script: |
             # 폴더 새로 생성
-            rm -rf ~/chatbot || true
+            sudo rm -rf ~/chatbot || true
             mkdir ~/chatbot
       - name: Copy files via SSH
         uses: appleboy/scp-action@v1
