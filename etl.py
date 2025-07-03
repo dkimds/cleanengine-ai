@@ -7,18 +7,45 @@ import feedparser
 from langchain_openai import OpenAIEmbeddings
 from langchain.schema import Document
 from pymilvus import connections, Collection, CollectionSchema, FieldSchema, DataType, utility
-from pymilvus import MilvusClient
 
 load_dotenv()
 # --- Task 1: 데이터 수집 ---
 @task
 def extract():
+    # Add User-Agent header to avoid 403 error
+    feedparser.USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+    
     feed = feedparser.parse("https://www.coindesk.com/arc/outboundfeeds/rss/")
     articles = []
+    
     for entry in feed.entries:
         title = entry.get("title", "")
-        content = entry.get("content", [{}])[0].get("value", "")
-        articles.append({"title": title, "content": content})
+        description = entry.get("description", "")
+        summary = entry.get("summary", "")
+        
+        # Try different content fields
+        content = ""
+        if hasattr(entry, 'content') and entry.content:
+            content = entry.content[0].value if isinstance(entry.content, list) and len(entry.content) > 0 else ""
+        elif entry.get("content_encoded"):
+            content = entry.get("content_encoded")
+        elif summary:
+            content = summary
+        elif description:
+            content = description
+        
+        link = entry.get("link", "")
+        author = entry.get("author", "") or entry.get("dc_creator", "")
+        pub_date = entry.get("published", "")
+        
+        articles.append({
+            "title": title,
+            "content": content,
+            "description": description,
+            "link": link,
+            "author": author,
+            "pub_date": pub_date
+        })
     return articles
 
 # --- Task 2: 텍스트 변환 ---
