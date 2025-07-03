@@ -19,7 +19,7 @@ from langchain_core.messages import HumanMessage, AIMessage
 
 # 랭체인 트래킹
 import mlflow
-mlflow.set_tracking_uri(uri="http://127.0.0.1:8080")
+mlflow.set_tracking_uri(uri="http://127.0.0.1:5001")
 
 mlflow.set_experiment("langchain")
 
