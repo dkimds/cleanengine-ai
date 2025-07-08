@@ -1,10 +1,8 @@
 # API 키를 환경변수로 관리하기 위한 설정 파일
 from dotenv import load_dotenv
-from fastapi import FastAPI, Query, BackgroundTasks
-from datetime import datetime, timedelta
-import threading
-import time
-from typing import Dict, List, Optional
+from fastapi import FastAPI, Query, BackgroundTasks, HTTPException, Header
+from datetime import datetime
+from typing import Optional
 from pydantic import BaseModel
 
 # AI 기능을 위한 프레임워크
@@ -14,8 +12,10 @@ from langchain_core.runnables import RunnablePassthrough, RunnableLambda
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import PromptTemplate
 from langchain_community.retrievers.tavily_search_api import TavilySearchAPIRetriever
-from langchain.memory import ConversationBufferWindowMemory
-from langchain_core.messages import HumanMessage, AIMessage
+
+# 사용자 정의 모듈
+from modules.thread_manager import thread_id_manager
+from modules.memory_manager import memory_manager
 
 # 랭체인 트래킹
 import mlflow
@@ -25,59 +25,6 @@ mlflow.set_experiment("langchain")
 
 # Enable MLflow tracing
 mlflow.langchain.autolog()
-
-# 메모리 관리를 위한 클래스
-class ThreadMemoryManager:
-    def __init__(self):
-        self.memories: Dict[str, ConversationBufferWindowMemory] = {}
-        self.last_activity: Dict[str, datetime] = {}
-        self.lock = threading.Lock()
-        
-        # 백그라운드 스레드로 30분마다 비활성 메모리 정리
-        self.cleanup_thread = threading.Thread(target=self._cleanup_inactive_memories, daemon=True)
-        self.cleanup_thread.start()
-    
-    def get_memory(self, thread_id: str) -> ConversationBufferWindowMemory:
-        """스레드 ID에 해당하는 메모리를 가져오거나 생성합니다."""
-        with self.lock:
-            if thread_id not in self.memories:
-                self.memories[thread_id] = ConversationBufferWindowMemory(
-                    k=10,  # 최근 10개의 대화만 기억
-                    return_messages=True
-                )
-            
-            self.last_activity[thread_id] = datetime.now()
-            return self.memories[thread_id]
-    
-    def reset_memory(self, thread_id: str) -> bool:
-        """특정 스레드의 메모리를 초기화합니다."""
-        with self.lock:
-            if thread_id in self.memories:
-                self.memories[thread_id].clear()
-                self.last_activity[thread_id] = datetime.now()
-                return True
-            return False
-    
-    def _cleanup_inactive_memories(self):
-        """30분 동안 비활성 상태인 메모리를 정리합니다."""
-        while True:
-            time.sleep(300)  # 5분마다 체크
-            current_time = datetime.now()
-            inactive_threshold = timedelta(minutes=30)
-            
-            with self.lock:
-                inactive_threads = []
-                for thread_id, last_time in self.last_activity.items():
-                    if current_time - last_time > inactive_threshold:
-                        inactive_threads.append(thread_id)
-                
-                for thread_id in inactive_threads:
-                    print(f"[메모리 정리] 스레드 {thread_id} 비활성으로 인한 메모리 삭제")
-                    del self.memories[thread_id]
-                    del self.last_activity[thread_id]
-
-# 전역 메모리 매니저 인스턴스
-memory_manager = ThreadMemoryManager()
 
 def log_to_mlflow(question: str, response: str, start_time: datetime):
     try:
@@ -142,6 +89,7 @@ news_chain = (
      "chat_history": lambda x: x.get("chat_history", "")}
     | news_prompt
     | ChatOpenAI(model="gpt-4o-mini")
+    | StrOutputParser()
 )
 
 # 2. 벡터 DB 서치
@@ -213,6 +161,7 @@ else:
             """
         )
         | ChatOpenAI(model="gpt-4o-mini")
+        | StrOutputParser()
     )
 
 # 3. 기타
@@ -232,6 +181,7 @@ Answer:
 """
     )
     | ChatOpenAI(model="gpt-4o-mini")
+    | StrOutputParser()
 )
 
 # 4. 리셋 체인
@@ -241,6 +191,7 @@ reset_chain = (
         비트코인 관련 전문지식이나 최신소식에 대해 무엇이든 물어보세요."""
     )
     | ChatOpenAI(model="gpt-4o-mini")
+    | StrOutputParser()
 )
 
 # 5. 경로 설정
@@ -255,34 +206,13 @@ def route(info):
     else:
         return general_chain
 
-def get_chat_history_string(memory: ConversationBufferWindowMemory) -> str:
-    """메모리에서 대화 히스토리를 문자열로 변환합니다."""
-    try:
-        messages = memory.chat_memory.messages
-        if not messages:
-            return ""
-        
-        history_parts = []
-        for message in messages[-6:]:  # 최근 6개 메시지만 사용
-            if isinstance(message, HumanMessage):
-                history_parts.append(f"Human: {message.content}")
-            elif isinstance(message, AIMessage):
-                history_parts.append(f"Assistant: {message.content}")
-        
-        return "\n".join(history_parts)
-    except Exception as e:
-        print(f"대화 히스토리 변환 오류: {e}")
-        return ""
-
-from langchain_core.runnables import RunnableLambda
-
 def create_full_chain_with_memory(thread_id: str):
     """메모리가 포함된 전체 체인을 생성합니다."""
     memory = memory_manager.get_memory(thread_id)
     
     def process_with_memory(inputs):
         question = inputs["question"]
-        chat_history = get_chat_history_string(memory)
+        chat_history = memory_manager.get_chat_history_string(memory)
         
         # 분류 체인 실행
         classification_input = {"question": question, "chat_history": chat_history}
@@ -298,11 +228,10 @@ def create_full_chain_with_memory(thread_id: str):
         chain_input = {"question": question, "chat_history": chat_history}
         response = selected_chain.invoke(chain_input)
         
-        # 메모리에 대화 저장 (response가 AIMessage 객체인 경우 content 추출)
-        response_content = response.content if hasattr(response, 'content') else str(response)
-        memory.save_context({"input": question}, {"output": response_content})
+        # 메모리에 대화 저장
+        memory.save_context({"input": question}, {"output": response})
         
-        return response_content
+        return response
     
     return RunnableLambda(process_with_memory)
 
@@ -311,83 +240,205 @@ app = FastAPI()
 class ChatResponse(BaseModel):
     response: str
     thread_id: str
+    user_id: int
     timestamp: datetime
 
-# 비동기 인보크
+class SessionResponse(BaseModel):
+    thread_id: str
+    user_id: int
+    message: str
+
+# JWT 토큰에서 스레드 ID 생성 엔드포인트
+@app.post("/session/create", response_model=SessionResponse)
+async def create_session(authorization: str = Header(..., description="Bearer JWT토큰")):
+    """JWT 토큰으로부터 사용자 세션을 생성하고 스레드 ID를 반환합니다."""
+    try:
+        # Bearer 토큰에서 실제 토큰 추출
+        if not authorization.startswith("Bearer "):
+            raise HTTPException(status_code=401, detail="Invalid authorization header format")
+        
+        access_token = authorization.replace("Bearer ", "")
+        
+        # 스레드 ID 생성
+        thread_id = thread_id_manager.get_or_create_thread_id(access_token)
+        if thread_id is None:
+            raise HTTPException(status_code=401, detail="Invalid or expired JWT token")
+        
+        # 사용자 ID 추출
+        user_id = thread_id_manager.get_user_id_from_thread(thread_id)
+        
+        return SessionResponse(
+            thread_id=thread_id,
+            user_id=user_id,
+            message="Session created successfully"
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[세션 생성 오류] {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+# 채팅 엔드포인트 (인증 필요)
 @app.get("/async/chat", response_model=ChatResponse)
 async def async_chat(
     question: str = Query(..., min_length=1, max_length=500),
-    thread_id: str = Query(default="default", description="대화 스레드 ID"),
+    authorization: str = Header(..., description="Bearer JWT토큰"),
     background_tasks: BackgroundTasks = None
 ):
     start_time = datetime.now()
     
     try:
+        # Bearer 토큰에서 실제 토큰 추출
+        if not authorization.startswith("Bearer "):
+            raise HTTPException(status_code=401, detail="Invalid authorization header format")
+        
+        access_token = authorization.replace("Bearer ", "")
+        
+        # 스레드 ID 가져오기 (없으면 새로 생성)
+        thread_id = thread_id_manager.get_or_create_thread_id(access_token)
+        if thread_id is None:
+            raise HTTPException(status_code=401, detail="Invalid or expired JWT token. Please create a session first.")
+        
+        # 사용자 ID 추출
+        user_id = thread_id_manager.get_user_id_from_thread(thread_id)
+        
         # 스레드별 체인 생성
         full_chain = create_full_chain_with_memory(thread_id)
         
         # 체인 실행
         response = await full_chain.ainvoke({"question": question})
         
-        # response를 문자열로 변환 (AIMessage 객체인 경우 content 추출)
+        # AIMessage 객체에서 content 추출
         if hasattr(response, 'content'):
-            response_str = str(response.content)
+            response_text = response.content
         else:
-            response_str = str(response)
+            response_text = str(response)
         
         # 로깅은 백그라운드로 넘김
         if background_tasks:
-            background_tasks.add_task(log_to_mlflow, question, response_str, start_time)
+            background_tasks.add_task(log_to_mlflow, question, response_text, start_time)
         
         return ChatResponse(
-            response=response_str,
+            response=response_text,
             thread_id=thread_id,
+            user_id=user_id,
             timestamp=datetime.now()
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
+        print(f"[채팅 처리 오류] {e}")
         error_response = f"죄송합니다. 처리 중 오류가 발생했습니다: {str(e)}"
-        return ChatResponse(
-            response=error_response,
-            thread_id=thread_id,
-            timestamp=datetime.now()
+        # 오류 시에도 적절한 응답 구조 유지
+        raise HTTPException(status_code=500, detail=error_response)
+
+# 세션 리셋 엔드포인트
+@app.post("/session/reset")
+async def reset_user_session(authorization: str = Header(..., description="Bearer JWT토큰")):
+    """사용자의 세션과 메모리를 모두 리셋합니다."""
+    try:
+        # Bearer 토큰에서 실제 토큰 추출
+        if not authorization.startswith("Bearer "):
+            raise HTTPException(status_code=401, detail="Invalid authorization header format")
+        
+        access_token = authorization.replace("Bearer ", "")
+        
+        # 기존 스레드 ID 가져오기
+        current_thread_id = thread_id_manager.get_or_create_thread_id(access_token)
+        if current_thread_id:
+            # 메모리 정리
+            memory_manager.cleanup_thread_memory(current_thread_id)
+        
+        # 새로운 세션 생성
+        success = thread_id_manager.reset_user_session(access_token)
+        if not success:
+            raise HTTPException(status_code=401, detail="Invalid or expired JWT token")
+        
+        # 새로운 스레드 ID 가져오기
+        new_thread_id = thread_id_manager.get_or_create_thread_id(access_token)
+        user_id = thread_id_manager.get_user_id_from_thread(new_thread_id)
+        
+        return SessionResponse(
+            thread_id=new_thread_id,
+            user_id=user_id,
+            message="Session reset successfully"
         )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[세션 리셋 오류] {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
-# 메모리 리셋 엔드포인트
-@app.post("/reset")
-async def reset_thread_memory(thread_id: str = Query(default="default")):
-    """특정 스레드의 메모리를 수동으로 리셋합니다."""
-    success = memory_manager.reset_memory(thread_id)
-    if success:
-        return {"message": f"스레드 {thread_id}의 메모리가 초기화되었습니다.", "thread_id": thread_id}
-    else:
-        return {"message": f"스레드 {thread_id}의 메모리가 존재하지 않습니다.", "thread_id": thread_id}
+# 관리자용 엔드포인트들
+@app.get("/admin/sessions")
+async def get_all_sessions():
+    """모든 세션 정보를 반환합니다. (관리자용)"""
+    thread_sessions = thread_id_manager.get_all_sessions()
+    memory_threads = memory_manager.get_all_active_threads()
+    
+    return {
+        "thread_sessions": thread_sessions,
+        "memory_threads": memory_threads,
+        "timestamp": datetime.now()
+    }
 
-# 활성 스레드 조회 엔드포인트
-@app.get("/threads")
+@app.get("/admin/threads")
 async def get_active_threads():
-    """현재 활성화된 스레드 목록을 반환합니다."""
-    with memory_manager.lock:
-        active_threads = []
-        current_time = datetime.now()
-        
-        for thread_id, last_activity in memory_manager.last_activity.items():
-            time_since_activity = current_time - last_activity
-            active_threads.append({
-                "thread_id": thread_id,
-                "last_activity": last_activity,
-                "minutes_since_activity": int(time_since_activity.total_seconds() / 60),
-                "messages_count": len(memory_manager.memories[thread_id].chat_memory.messages)
-            })
-        
-        return {"active_threads": active_threads, "total_count": len(active_threads)}
+    """현재 활성화된 메모리 스레드 목록을 반환합니다. (관리자용)"""
+    return memory_manager.get_all_active_threads()
+
+@app.delete("/admin/session/{thread_id}")
+async def cleanup_session(thread_id: str):
+    """특정 스레드의 세션과 메모리를 정리합니다. (관리자용)"""
+    thread_cleaned = thread_id_manager.cleanup_session(thread_id)
+    memory_cleaned = memory_manager.cleanup_thread_memory(thread_id)
+    
+    return {
+        "thread_id": thread_id,
+        "thread_cleaned": thread_cleaned,
+        "memory_cleaned": memory_cleaned,
+        "message": "Session cleanup completed"
+    }
 
 # 헬스체크 엔드포인트
 @app.get("/health")
 async def health_check():
+    thread_sessions = thread_id_manager.get_all_sessions()
+    memory_threads = memory_manager.get_all_active_threads()
+    
     return {
         "status": "healthy",
         "timestamp": datetime.now(),
         "milvus_connected": use_milvus,
-        "active_threads": len(memory_manager.memories)
+        "active_thread_sessions": thread_sessions["total_sessions"],
+        "active_memory_threads": memory_threads["total_count"]
     }
+
+# 토큰 테스트용 엔드포인트 (개발용)
+@app.post("/debug/parse-token")
+async def debug_parse_token(authorization: str = Header(..., description="Bearer JWT토큰")):
+    """JWT 토큰 파싱을 테스트합니다. (개발용)"""
+    try:
+        if not authorization.startswith("Bearer "):
+            raise HTTPException(status_code=401, detail="Invalid authorization header format")
+        
+        access_token = authorization.replace("Bearer ", "")
+        user_id = thread_id_manager.parse_jwt_token(access_token)
+        
+        if user_id is None:
+            raise HTTPException(status_code=401, detail="Invalid JWT token")
+        
+        return {
+            "user_id": user_id,
+            "token_valid": True,
+            "message": "Token parsed successfully"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[토큰 파싱 오류] {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
