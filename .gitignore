@@ -11,3 +11,4 @@ mlartifacts
 mlruns
 *.ipynb
 /.idea
+vllm/
