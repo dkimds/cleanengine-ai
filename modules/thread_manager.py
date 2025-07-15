@@ -4,6 +4,12 @@ import uuid
 from datetime import datetime
 from typing import Dict, Optional
 import threading
+import jwt
+from jwt.exceptions import InvalidTokenError, ExpiredSignatureError, InvalidSignatureError
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 class ThreadIDManager:
@@ -13,10 +19,19 @@ class ThreadIDManager:
         self.user_sessions: Dict[int, str] = {}  # user_id -> thread_id 매핑
         self.thread_users: Dict[str, int] = {}   # thread_id -> user_id 매핑
         self.lock = threading.Lock()
+        
+        # JWT 설정
+        self.jwt_secret = os.getenv('JWT_SECRET', 'your-secret-key-here')
+        self.jwt_algorithm = os.getenv('JWT_ALGORITHM', 'HS256')
+        self.jwt_verify_exp = os.getenv('JWT_VERIFY_EXP', 'True').lower() == 'true'
+        
+        if self.jwt_secret == 'your-secret-key-here':
+            print("[보안 경고] JWT_SECRET 환경 변수가 설정되지 않았습니다. 기본값을 사용합니다.")
     
     def parse_jwt_token(self, access_token: str) -> Optional[int]:
         """
         JWT 토큰에서 userId를 추출합니다.
+        PyJWT 라이브러리를 사용하여 토큰을 안전하게 검증하고 파싱합니다.
         
         Args:
             access_token: JWT 토큰 문자열
@@ -25,39 +40,65 @@ class ThreadIDManager:
             userId (int) 또는 None (파싱 실패시)
         """
         try:
-            # JWT는 header.payload.signature 형태
-            parts = access_token.split('.')
-            if len(parts) != 3:
-                print(f"[JWT 파싱 오류] 잘못된 JWT 형식: {len(parts)}개 부분")
-                return None
+            # Bearer 토큰 형식인 경우 "Bearer " 제거
+            if access_token.startswith('Bearer '):
+                access_token = access_token[7:]
             
-            # payload 부분을 base64 디코딩
-            payload = parts[1]
-            
-            # Base64 패딩 추가 (필요한 경우)
-            padding = len(payload) % 4
-            if padding:
-                payload += '=' * (4 - padding)
-            
-            # Base64 디코딩
-            decoded_bytes = base64.b64decode(payload)
-            decoded_str = decoded_bytes.decode('utf-8')
-            
-            # JSON 파싱
-            payload_data = json.loads(decoded_str)
+            # JWT 토큰 디코딩 및 검증
+            payload = jwt.decode(
+                access_token,
+                self.jwt_secret,
+                algorithms=[self.jwt_algorithm],
+                options={
+                    'verify_signature': True,
+                    'verify_exp': self.jwt_verify_exp,
+                    'verify_iat': True,
+                    'verify_nbf': True,
+                    'verify_aud': False,  # audience 검증은 필요에 따라 설정
+                    'verify_iss': False,  # issuer 검증은 필요에 따라 설정
+                }
+            )
             
             # userId 추출
-            user_id = payload_data.get('userId')
+            user_id = payload.get('userId') or payload.get('user_id') or payload.get('sub')
             if user_id is None:
-                print(f"[JWT 파싱 오류] userId가 payload에 없습니다: {payload_data}")
+                print(f"[JWT 파싱 오류] userId가 payload에 없습니다: {list(payload.keys())}")
+                return None
+            
+            # 사용자 ID를 정수로 변환
+            try:
+                user_id = int(user_id)
+            except (ValueError, TypeError):
+                print(f"[JWT 파싱 오류] userId가 유효한 정수가 아닙니다: {user_id}")
                 return None
                 
             print(f"[JWT 파싱 성공] User ID: {user_id}")
-            return int(user_id)
+            return user_id
             
-        except Exception as e:
-            print(f"[JWT 파싱 오류] {e}")
+        except ExpiredSignatureError:
+            print("[JWT 파싱 오류] 토큰이 만료되었습니다")
             return None
+        except InvalidSignatureError:
+            print("[JWT 파싱 오류] 토큰 서명이 유효하지 않습니다")
+            return None
+        except InvalidTokenError as e:
+            print(f"[JWT 파싱 오류] 유효하지 않은 토큰: {e}")
+            return None
+        except Exception as e:
+            print(f"[JWT 파싱 오류] 예기치 않은 오류: {e}")
+            return None
+    
+    def validate_jwt_token(self, access_token: str) -> bool:
+        """
+        JWT 토큰의 유효성을 검증합니다.
+        
+        Args:
+            access_token: JWT 토큰 문자열
+            
+        Returns:
+            bool: 토큰이 유효한 경우 True, 그렇지 않으면 False
+        """
+        return self.parse_jwt_token(access_token) is not None
     
     def get_or_create_thread_id(self, access_token: str) -> Optional[str]:
         """
