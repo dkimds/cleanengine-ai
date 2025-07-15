@@ -79,6 +79,7 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     response: str
     timestamp: datetime
+    thread_id: str
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat(
@@ -110,7 +111,8 @@ async def chat(
         
         return ChatResponse(
             response=response_text,
-            timestamp=datetime.now()
+            timestamp=datetime.now(),
+            thread_id=thread_id
         )
         
     except Exception as e:
