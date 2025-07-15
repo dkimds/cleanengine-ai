@@ -4,6 +4,9 @@ from fastapi import FastAPI, BackgroundTasks, HTTPException, Header
 from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel
+import jwt
+import json
+import base64
 
 # 사용자 정의 모듈
 from modules.memory_manager import memory_manager
@@ -37,6 +40,33 @@ load_dotenv()
 chain_router = ChainRouter(model="gpt-4o-mini")
 
 # For backward compatibility, create a function that uses the new router
+def extract_user_id_from_token(access_token: str) -> str:
+    """JWT 토큰에서 userId를 추출합니다."""
+    try:
+        # JWT 토큰을 '.'로 분할하여 payload 부분 추출
+        parts = access_token.split('.')
+        if len(parts) != 3:
+            raise ValueError("Invalid JWT token format")
+        
+        # payload 부분 (두 번째 부분) 디코딩
+        payload_encoded = parts[1]
+        # Base64 패딩 추가 (필요시)
+        payload_encoded += '=' * (4 - len(payload_encoded) % 4)
+        
+        # Base64 디코딩
+        payload_decoded = base64.b64decode(payload_encoded)
+        payload_json = json.loads(payload_decoded)
+        
+        # userId 추출
+        user_id = payload_json.get('userId')
+        if user_id is None:
+            raise ValueError("userId not found in token")
+        
+        return str(user_id)
+    
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=f"Invalid token: {str(e)}")
+
 def create_full_chain_with_memory(thread_id: str):
     """메모리가 포함된 전체 체인을 생성합니다."""
     return chain_router.create_full_chain_with_memory(thread_id)
@@ -53,14 +83,18 @@ class ChatResponse(BaseModel):
 @app.post("/chat", response_model=ChatResponse)
 async def chat(
     request: ChatRequest,
-    background_tasks: BackgroundTasks
+    background_tasks: BackgroundTasks,
+    access_token: Optional[str] = Header(None, alias="access_token")
 ):
     """채팅 엔드포인트 - POST 방식"""
     start_time = datetime.now()
     
     try:
-        # 기본 스레드 ID 사용 (JWT 없이)
-        thread_id = "default_thread"
+        # JWT 토큰에서 userId 추출하여 thread_id로 사용
+        if access_token:
+            thread_id = extract_user_id_from_token(access_token)
+        else:
+            raise HTTPException(status_code=401, detail="Access token required")
         
         # 스레드별 체인 생성
         full_chain = create_full_chain_with_memory(thread_id)
@@ -86,14 +120,18 @@ async def chat(
 
 # 세션 리셋 엔드포인트
 @app.post("/reset")
-async def reset_session():
+async def reset_session(access_token: Optional[str] = Header(None, alias="access_token")):
     """대화 메모리를 리셋합니다."""
     try:
-        # 기본 스레드 ID의 메모리 정리
-        thread_id = "default_thread"
+        # JWT 토큰에서 userId 추출하여 thread_id로 사용
+        if access_token:
+            thread_id = extract_user_id_from_token(access_token)
+        else:
+            raise HTTPException(status_code=401, detail="Access token required")
+        
         memory_manager.cleanup_thread_memory(thread_id)
         
-        return {"message": "Session reset successfully"}
+        return {"message": "Session reset successfully", "thread_id": thread_id}
         
     except Exception as e:
         print(f"[세션 리셋 오류] {e}")
