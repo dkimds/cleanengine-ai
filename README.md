@@ -63,6 +63,11 @@ bash standalone_embed.sh start
 ```sh
 pip install -r requirements.txt
 ```
+### 외부 데이터 수집 스케줄링
+Milvus에 저장할 데이터를 수집하는 ETL 스크립트를 실행합니다.
+```sh
+python etl.py
+```
 ### 로깅 및 모니터링
 ```sh
 mlflow server --host 127.0.0.1 --port 5001
@@ -71,10 +76,6 @@ mlflow server --host 127.0.0.1 --port 5001
 코드 수정하면 바로 해당사항 적용
 ```sh
 uvicorn main:app --reload
-```
-### 외부 데이터 수집 스케줄링
-```sh
-python etl.py
 ```
 ## 기타
 `agent.py`: main.py 같은 기능의 LangGraph 프로토타입
