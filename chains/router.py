@@ -17,23 +17,27 @@ class ChainRouter:
     Routes user queries to the appropriate chain based on classification.
     """
     
-    def __init__(self, model: str = "gpt-4o-mini"):
+    def __init__(self, model: str = "Qwen/Qwen2-0.5B-Instruct"):
         """
         Initialize the chain router with all chain types.
         
         Args:
-            model: OpenAI model to use for all chains
+            model: vLLM model to use for all chains
         """
         self.model = model
         self._setup_chains()
     
     def _setup_chains(self):
         """Initialize all the chain handlers."""
+        # Use vLLM for classification, general, and reset chains
         self.classification_chain = ClassificationChain(self.model)
-        self.news_chain = NewsChain(self.model)
-        self.finance_chain = FinanceChain(self.model)
         self.general_chain = GeneralChain(self.model)
         self.reset_chain = ResetChain(self.model)
+        
+        # Use OpenAI for news and finance chains (better for real-time data and complex reasoning)
+        openai_model = "gpt-4o-mini"
+        self.news_chain = NewsChain(openai_model)
+        self.finance_chain = FinanceChain(openai_model)
         
         # Chain routing map
         self.chain_map = {
