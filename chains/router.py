@@ -34,31 +34,38 @@ class ChainRouter:
         self.general_chain = GeneralChain(self.model)
         self.reset_chain = ResetChain(self.model)
         
-        # Use OpenAI for news and finance chains (better for real-time data and complex reasoning)
-        openai_model = "gpt-4o-mini"
-        self.news_chain = NewsChain(openai_model)
-        self.finance_chain = FinanceChain(openai_model)
+        # OpenAI model for news and finance chains
+        self.openai_model = "gpt-4o-mini"
         
-        # Chain routing map
+        # Chain routing map (chains will be created with thread_id when needed)
         self.chain_map = {
-            "최신소식": self.news_chain,
-            "전문지식": self.finance_chain,
+            "최신소식": "news",
+            "전문지식": "finance",
             "리셋": self.reset_chain,
             "기타": self.general_chain
         }
     
-    def route(self, topic: str):
+    def route(self, topic: str, thread_id: Optional[str] = None):
         """
         Route to the appropriate chain based on topic.
         
         Args:
             topic: Classification result from classification chain
+            thread_id: Thread ID for memory management
             
         Returns:
             Appropriate chain handler
         """
         topic = topic.strip()
-        return self.chain_map.get(topic, self.general_chain)
+        chain_type = self.chain_map.get(topic, self.general_chain)
+        
+        # Create news/finance chains with thread_id
+        if chain_type == "news":
+            return NewsChain(self.openai_model, thread_id=thread_id)
+        elif chain_type == "finance":
+            return FinanceChain(self.openai_model, thread_id=thread_id)
+        else:
+            return chain_type
     
     def process_query(self, question: str, chat_history: str = "") -> str:
         """
@@ -78,7 +85,7 @@ class ChainRouter:
         }
         topic = self.classification_chain.invoke(classification_input)
         
-        # Route to appropriate chain
+        # Route to appropriate chain  
         selected_chain = self.route(topic)
         
         # Process with the selected chain
@@ -117,7 +124,7 @@ class ChainRouter:
                 return self.reset_chain.invoke({"question": question})
             
             # Route to appropriate chain
-            selected_chain = self.route(topic)
+            selected_chain = self.route(topic, thread_id)
             chain_input = {
                 "question": question,
                 "chat_history": chat_history
@@ -173,15 +180,14 @@ class ChainRouter:
                 "model": self.model
             },
             "news": {
-                "class": self.news_chain.__class__.__name__,
-                "model": self.model,
-                "search_k": self.news_chain.search_k
+                "class": "NewsChain",
+                "model": self.openai_model,
+                "search_k": 3
             },
             "finance": {
-                "class": self.finance_chain.__class__.__name__,
-                "model": self.model,
-                "search_k": self.finance_chain.search_k,
-                "milvus_available": self.finance_chain.is_milvus_available()
+                "class": "FinanceChain", 
+                "model": self.openai_model,
+                "search_k": 3
             },
             "general": {
                 "class": self.general_chain.__class__.__name__,
