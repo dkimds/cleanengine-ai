@@ -104,11 +104,3 @@ Answer (in Korean):"""
             News-based response as string
         """
         return await self.chain.ainvoke(inputs)
-    
-    def get_chain(self):
-        """Get the underlying chain object."""
-        return self.chain
-    
-    def get_retriever(self):
-        """Get the web search retriever."""
-        return self.retriever

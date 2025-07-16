@@ -149,10 +149,6 @@ Question: {question}
         """
         return await self.chain.ainvoke(inputs)
     
-    def get_chain(self):
-        """Get the underlying chain object."""
-        return self.chain
-    
     def get_retriever(self) -> Optional[Any]:
         """Get the vector database retriever if available."""
         return self.retriever if self.use_milvus else None

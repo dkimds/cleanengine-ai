@@ -122,7 +122,3 @@ Answer with only the category name:"""
         """
         # vLLM doesn't have native async support, so we use sync method
         return self.invoke(inputs)
-    
-    def get_chain(self):
-        """Get the underlying vLLM object."""
-        return self.llm
