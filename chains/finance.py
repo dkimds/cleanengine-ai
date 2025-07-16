@@ -16,16 +16,18 @@ class FinanceChain:
     Handles queries about financial expert knowledge using vector database search.
     """
     
-    def __init__(self, model: str = "gpt-4o-mini", search_k: int = 3):
+    def __init__(self, model: str = "gpt-4o-mini", search_k: int = 3, thread_id: Optional[str] = None):
         """
         Initialize the finance chain.
         
         Args:
             model: OpenAI model to use for response generation
             search_k: Number of search results to retrieve from vector DB
+            thread_id: Thread ID for memory management
         """
         self.model = model
         self.search_k = search_k
+        self.thread_id = thread_id
         self.use_milvus = False
         self.vectorstore = None
         self._setup_milvus()

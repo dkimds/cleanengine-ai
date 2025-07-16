@@ -6,7 +6,7 @@ from langchain_openai import ChatOpenAI
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import PromptTemplate
 from langchain_community.retrievers.tavily_search_api import TavilySearchAPIRetriever
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 
 class NewsChain:
@@ -14,16 +14,18 @@ class NewsChain:
     Handles queries about latest news and current events using web search.
     """
     
-    def __init__(self, model: str = "gpt-4o-mini", search_k: int = 3):
+    def __init__(self, model: str = "gpt-4o-mini", search_k: int = 3, thread_id: Optional[str] = None):
         """
         Initialize the news chain.
         
         Args:
             model: OpenAI model to use for response generation
             search_k: Number of search results to retrieve
+            thread_id: Thread ID for memory management
         """
         self.model = model
         self.search_k = search_k
+        self.thread_id = thread_id
         self._setup_chain()
     
     def _setup_chain(self):
