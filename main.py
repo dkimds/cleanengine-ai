@@ -37,7 +37,7 @@ def log_to_mlflow(question: str, response: str, start_time: datetime):
 load_dotenv()
 
 # Initialize chain router
-chain_router = ChainRouter(model="gpt-4o-mini")
+chain_router = ChainRouter(model="Qwen/Qwen2-0.5B-Instruct")
 
 # For backward compatibility, create a function that uses the new router
 def extract_user_id_from_token(access_token: str) -> str:
