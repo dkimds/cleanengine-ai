@@ -2,6 +2,9 @@
 Chain router for routing queries to appropriate chain handlers.
 """
 
+import os
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
 from .classification import ClassificationChain
 from .news import NewsChain
 from .finance import FinanceChain
