@@ -12,3 +12,5 @@ mlruns
 *.ipynb
 /.idea
 vllm/
+lm-evaluation-harness/
+*.zip
