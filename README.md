@@ -75,7 +75,7 @@ mlflow server --host 127.0.0.1 --port 5001
 ### AI 서버 실행
 코드 수정하면 바로 해당사항 적용
 ```sh
-uvicorn main:app --reload
+uvicorn main:app --reload --port 8001
 ```
 ## 기타
 `agent.py`: main.py 같은 기능의 LangGraph 프로토타입
