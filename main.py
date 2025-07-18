@@ -11,6 +11,7 @@ import base64
 # 사용자 정의 모듈
 from modules.memory_manager import memory_manager
 from chains.router import ChainRouter
+from config import DEFAULT_MODEL
 
 # 랭체인 트래킹
 import mlflow
@@ -37,7 +38,7 @@ def log_to_mlflow(question: str, response: str, start_time: datetime):
 load_dotenv()
 
 # Initialize chain router
-chain_router = ChainRouter(model="Qwen/Qwen2-0.5B-Instruct")
+chain_router = ChainRouter(model=DEFAULT_MODEL)
 
 # For backward compatibility, create a function that uses the new router
 def extract_user_id_from_token(access_token: str) -> str:
