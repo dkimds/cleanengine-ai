@@ -62,17 +62,17 @@ Answer with only the category name (최신소식 or 전문지식):"""
         """
         question_lower = question.lower()
         
-        # First, do content-based classification as primary method
-        # Check if question contains Bitcoin/crypto keywords
-        crypto_keywords = ["비트코인", "bitcoin", "btc", "이더리움", "ethereum", "암호화폐", "코인", "crypto"]
-        has_crypto = any(keyword in question_lower for keyword in crypto_keywords)
+        # 1. RULES FIRST - Fast path for obvious cases
         
+        # Reset requests (highest priority)
         if any(word in question_lower for word in ["리셋", "초기화", "지워", "reset", "clear"]):
             return "리셋"
-        elif not has_crypto:
-            # Non-crypto questions go to 기타
+        
+        # Non-crypto questions → 기타
+        has_crypto = any(keyword in question_lower for keyword in CRYPTO_KEYWORDS)
+        
+        if not has_crypto:
             return "기타"
-        elif any(word in question_lower for word in ["가격", "시세", "얼마", "달러", "원", "뉴스", "최신"]):
 
         # 2. LLM for ambiguous crypto questions
         try:
