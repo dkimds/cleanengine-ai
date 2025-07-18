@@ -1,4 +1,4 @@
-from config import DEFAULT_MODEL
+from config import DEFAULT_MODEL, CRYPTO_KEYWORDS
 """
 Classification chain for determining the type of user query.
 """
@@ -8,7 +8,6 @@ from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import RunnableLambda
 from typing import Dict, Any
 from .vllm_singleton import vllm_singleton
-from config import DEFAULT_MODEL
 
 
 class ClassificationChain:
@@ -31,33 +30,28 @@ class ClassificationChain:
     def _setup_chain(self):
         """Set up the classification chain with prompt and model."""
         
-        # Classification prompt template
+        # Classification prompt template - focused on crypto distinction
         self.prompt = PromptTemplate.from_template(
-            """Classify this question into exactly ONE category:
+            """Classify this cryptocurrency question into exactly ONE category:
 
 Categories:
-1. 최신소식 - Bitcoin/crypto prices, latest news, recent updates
-   Examples: "비트코인 가격은?", "최신 비트코인 뉴스", "현재 이더리움 시세"
+1. 최신소식 - Current prices, recent news, market updates, real-time data
+   Examples: "비트코인 현재 가격", "이더리움 급락 이유", "오늘 암호화폐 뉴스", "최근 ETF 승인"
 
-2. 전문지식 - Technical analysis, investment strategies, crypto education
-   Examples: "비트코인 투자 전략", "블록체인 기술 설명", "차트 분석 방법"
-
-3. 리셋 - Reset/clear conversation requests
-   Examples: "리셋", "초기화", "지워줘", "reset", "clear"
-
-4. 기타 - Everything else (food, weather, general chat, non-crypto topics)
-   Examples: "점심 뭐야", "날씨 어때", "안녕하세요", "영화 추천"
+2. 전문지식 - Investment strategies, technical analysis, educational content, how-to guides
+   Examples: "투자 전략", "차트 분석 방법", "스테이킹 수익률 계산", "DeFi 원리 설명"
 
 Question: {question}
 
-Answer with only the category name:"""
+Answer with only the category name (최신소식 or 전문지식):"""
         )
         
         # Setup vLLM-based processing
     
     def classify(self, question: str, chat_history: str = "") -> str:
         """
-        Classify a user question.
+        Classify a user question using true hybrid approach.
+        Rules for obvious cases, LLM for crypto ambiguity.
         
         Args:
             question: The user's question
@@ -66,17 +60,6 @@ Answer with only the category name:"""
         Returns:
             Classification result as string
         """
-        prompt_text = self.prompt.format(
-            question=question,
-            chat_history=chat_history
-        )
-        outputs = self.llm.generate([prompt_text], self.sampling_params)
-        result = outputs[0].outputs[0].text.strip()
-        
-        # Extract just the classification category
-        valid_categories = ["최신소식", "전문지식", "리셋", "기타"]
-        
-        # Try to extract category from vLLM output, but be careful about false matches
         question_lower = question.lower()
         
         # First, do content-based classification as primary method
@@ -90,12 +73,27 @@ Answer with only the category name:"""
             # Non-crypto questions go to 기타
             return "기타"
         elif any(word in question_lower for word in ["가격", "시세", "얼마", "달러", "원", "뉴스", "최신"]):
-            return "최신소식"
-        elif any(word in question_lower for word in ["전략", "분석", "방법", "기술", "블록체인", "투자법"]):
-            return "전문지식"
-        else:
-            # Default crypto questions to 최신소식
-            return "최신소식"
+
+        # 2. LLM for ambiguous crypto questions
+        try:
+            prompt_text = self.prompt.format(
+                question=question,
+                chat_history=chat_history
+            )
+            outputs = self.llm.generate([prompt_text], self.sampling_params)
+            result = outputs[0].outputs[0].text.strip()
+            
+            # Extract category from LLM output
+            if "전문지식" in result:
+                return "전문지식"
+            elif "최신소식" in result:
+                return "최신소식"
+            else:
+                # Default for crypto questions
+                return "최신소식"
+                
+        except Exception as e:
+            return "최신소식"  # Safe fallback for crypto questions
     
     def invoke(self, inputs: Dict[str, Any]) -> str:
         """
