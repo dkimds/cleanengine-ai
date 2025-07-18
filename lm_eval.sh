@@ -1,7 +1,7 @@
 uv run lm_eval --model vllm \
-    --model_args pretrained=Qwen/Qwen3-0.6B,max_model_len=2048 \
-    --tasks hellaswag \
+    --model_args pretrained=Qwen/Qwen2.5-0.5B-Instruct,max_model_len=2048 \
+    --tasks hellaswag,kobest_hellaswag \
     --batch_size auto \
     --limit 100 \
-    --device cpu \
+    --device mps \
     --verbosity DEBUG
