@@ -1,9 +1,11 @@
+from config import DEFAULT_MODEL
 """
 Singleton vLLM instance to be shared across all chains.
 """
 
 from vllm import LLM, SamplingParams
 from typing import Optional
+from config import DEFAULT_MODEL
 
 
 class VLLMSingleton:
@@ -18,7 +20,7 @@ class VLLMSingleton:
             cls._instance = super(VLLMSingleton, cls).__new__(cls)
         return cls._instance
     
-    def get_llm(self, model: str = "Qwen/Qwen2-0.5B-Instruct") -> LLM:
+    def get_llm(self, model: str = DEFAULT_MODEL) -> LLM:
         """Get the vLLM instance, creating it if necessary."""
         if self._llm is None or self._model != model:
             print(f"Initializing vLLM with model: {model}")

@@ -1,3 +1,4 @@
+from config import DEFAULT_MODEL
 """
 General chain for handling miscellaneous queries.
 """
@@ -10,7 +11,7 @@ class GeneralChain:
     Handles general queries that don't fit into specific categories.
     """
     
-    def __init__(self, model: str = "Qwen/Qwen2-0.5B-Instruct"):
+    def __init__(self, model: str = DEFAULT_MODEL):
         pass
     
     

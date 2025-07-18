@@ -1,3 +1,4 @@
+from config import DEFAULT_MODEL
 """
 Reset chain for handling conversation reset requests.
 """
@@ -10,7 +11,7 @@ class ResetChain:
     Handles conversation reset requests.
     """
     
-    def __init__(self, model: str = "Qwen/Qwen2-0.5B-Instruct"):
+    def __init__(self, model: str = DEFAULT_MODEL):
         pass
     
     

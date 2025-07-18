@@ -1,3 +1,4 @@
+from config import DEFAULT_MODEL
 """
 Chain router for routing queries to appropriate chain handlers.
 """
@@ -20,7 +21,7 @@ class ChainRouter:
     Routes user queries to the appropriate chain based on classification.
     """
     
-    def __init__(self, model: str = "Qwen/Qwen2-0.5B-Instruct"):
+    def __init__(self, model: str = DEFAULT_MODEL):
         """
         Initialize the chain router with all chain types.
         

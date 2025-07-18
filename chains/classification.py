@@ -1,3 +1,4 @@
+from config import DEFAULT_MODEL
 """
 Classification chain for determining the type of user query.
 """
@@ -7,6 +8,7 @@ from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import RunnableLambda
 from typing import Dict, Any
 from .vllm_singleton import vllm_singleton
+from config import DEFAULT_MODEL
 
 
 class ClassificationChain:
@@ -14,7 +16,7 @@ class ClassificationChain:
     Classifies user questions into categories: 최신소식, 전문지식, 리셋, or 기타
     """
     
-    def __init__(self, model: str = "Qwen/Qwen2-0.5B-Instruct"):
+    def __init__(self, model: str = DEFAULT_MODEL):
         """
         Initialize the classification chain.
         
