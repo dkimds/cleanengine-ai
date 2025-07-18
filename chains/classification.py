@@ -32,26 +32,18 @@ class ClassificationChain:
         
         # Classification prompt template - focused on crypto distinction
         self.prompt = PromptTemplate.from_template(
-"""Classify this cryptocurrency question into exactly ONE category:
+            """Classify this cryptocurrency question into exactly ONE category:
 
 Categories:
-1. 최신소식 - Questions about CURRENT events, prices, or recent happenings
-   - Key indicators: 오늘, 현재, 지금, 최근, 갑자기, 방금, 어제, 이번주
-   - Examples: "비트코인 현재 가격", "오늘 급락 원인", "최근 ETF 뉴스"
-   - Focus: What is happening NOW or recently happened
+1. 최신소식 - Current prices, recent news, market updates, real-time data
+   Examples: "비트코인 현재 가격", "이더리움 급락 이유", "오늘 암호화폐 뉴스", "최근 ETF 승인"
 
-2. 전문지식 - Questions asking HOW TO do something or EXPLAIN concepts
-   - Key indicators: 방법, 전략, 원리, 설명, 어떻게, 계산, 분석
-   - Examples: "투자 전략", "차트 분석 방법", "DeFi 원리", "수익률 계산법"
-   - Focus: Learning, understanding, or step-by-step guidance
-
-CRITICAL RULE:
-- If the question contains time words (오늘, 현재, 지금, 최근, 갑자기) → 최신소식
-- If the question asks "how to" or "explain" → 전문지식
+2. 전문지식 - Investment strategies, technical analysis, educational content, how-to guides
+   Examples: "투자 전략", "차트 분석 방법", "스테이킹 수익률 계산", "DeFi 원리 설명"
 
 Question: {question}
 
-Category:"""
+Answer with only the category name (최신소식 or 전문지식):"""
         )
         
         # Setup vLLM-based processing
