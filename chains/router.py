@@ -110,7 +110,44 @@ class ChainRouter:
         Returns:
             RunnableLambda that processes queries with memory
         """
-        def process_with_memory(inputs):
+        async def process_with_memory_async(inputs):
+            """진짜 비동기 메모리 처리 함수"""
+            question = inputs["question"]
+            memory = memory_manager.get_memory(thread_id)
+            chat_history = memory_manager.get_chat_history_string(memory)
+            
+            # 비동기로 분류
+            classification_input = {
+                "question": question,
+                "chat_history": chat_history
+            }
+            topic = await self.classification_chain.ainvoke(classification_input)
+            
+            # Reset 요청 처리
+            if topic.strip() == "리셋":
+                memory_manager.reset_memory(thread_id)
+                return self.reset_chain.invoke({"question": question})
+            
+            # 적절한 체인으로 라우팅
+            selected_chain = self.route(topic, thread_id)
+            chain_input = {
+                "question": question,
+                "chat_history": chat_history
+            }
+            
+            # 체인에 따라 비동기/동기 처리
+            if hasattr(selected_chain, 'ainvoke'):
+                response = await selected_chain.ainvoke(chain_input)
+            else:
+                response = selected_chain.invoke(chain_input)
+            
+            # 메모리에 저장
+            memory.save_context({"input": question}, {"output": response})
+            
+            return response
+        
+        def process_with_memory_sync(inputs):
+            """동기 버전 (호환성용)"""
             question = inputs["question"]
             memory = memory_manager.get_memory(thread_id)
             chat_history = memory_manager.get_chat_history_string(memory)
@@ -140,7 +177,13 @@ class ChainRouter:
             
             return response
         
-        return RunnableLambda(process_with_memory)
+        # RunnableLambda 생성
+        lambda_chain = RunnableLambda(process_with_memory_sync)
+        
+        # 진짜 비동기 메서드 추가
+        lambda_chain.ainvoke = process_with_memory_async
+        
+        return lambda_chain
     
     async def aprocess_query(self, question: str, chat_history: str = "") -> str:
         """

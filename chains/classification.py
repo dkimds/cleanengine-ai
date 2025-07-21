@@ -3,6 +3,8 @@ from config import DEFAULT_MODEL, CRYPTO_KEYWORDS
 Classification chain for determining the type of user query.
 """
 
+import asyncio
+import concurrent.futures
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import RunnableLambda
@@ -26,6 +28,12 @@ class ClassificationChain:
         self.llm = vllm_singleton.get_llm(model)
         self.sampling_params = vllm_singleton.create_sampling_params(temperature=0.0, max_tokens=20)
         self._setup_chain()
+        
+        # 비동기 처리를 위한 ThreadPoolExecutor
+        self.executor = concurrent.futures.ThreadPoolExecutor(
+            max_workers=4, 
+            thread_name_prefix="classification_async"
+        )
     
     def _setup_chain(self):
         """Set up the classification chain with prompt and model."""
@@ -45,13 +53,10 @@ Question: {question}
 
 Answer with only the category name (최신소식 or 전문지식):"""
         )
-        
-        # Setup vLLM-based processing
     
-    def classify(self, question: str, chat_history: str = "") -> str:
+    def _classify_sync(self, question: str, chat_history: str = "") -> str:
         """
-        Classify a user question using true hybrid approach.
-        Rules for obvious cases, LLM for crypto ambiguity.
+        동기적으로 분류를 수행하는 내부 메서드.
         
         Args:
             question: The user's question
@@ -93,7 +98,43 @@ Answer with only the category name (최신소식 or 전문지식):"""
                 return "최신소식"
                 
         except Exception as e:
+            print(f"[Classification Error] {e}")
             return "최신소식"  # Safe fallback for crypto questions
+    
+    def classify(self, question: str, chat_history: str = "") -> str:
+        """
+        Classify a user question using true hybrid approach.
+        Rules for obvious cases, LLM for crypto ambiguity.
+        
+        Args:
+            question: The user's question
+            chat_history: Previous conversation history
+            
+        Returns:
+            Classification result as string
+        """
+        return self._classify_sync(question, chat_history)
+    
+    async def classify_async(self, question: str, chat_history: str = "") -> str:
+        """
+        비동기적으로 분류를 수행합니다.
+        
+        Args:
+            question: The user's question
+            chat_history: Previous conversation history
+            
+        Returns:
+            Classification result as string
+        """
+        # ThreadPoolExecutor를 사용하여 동기 작업을 비동기로 실행
+        loop = asyncio.get_event_loop()
+        result = await loop.run_in_executor(
+            self.executor, 
+            self._classify_sync, 
+            question, 
+            chat_history
+        )
+        return result
     
     def invoke(self, inputs: Dict[str, Any]) -> str:
         """
@@ -112,7 +153,7 @@ Answer with only the category name (최신소식 or 전문지식):"""
     
     async def ainvoke(self, inputs: Dict[str, Any]) -> str:
         """
-        Asynchronously invoke the classification chain.
+        진짜 비동기로 classification chain을 실행합니다.
         
         Args:
             inputs: Dictionary containing 'question' and 'chat_history'
@@ -120,5 +161,12 @@ Answer with only the category name (최신소식 or 전문지식):"""
         Returns:
             Classification result as string
         """
-        # vLLM doesn't have native async support, so we use sync method
-        return self.invoke(inputs)
+        return await self.classify_async(
+            inputs.get("question", ""),
+            inputs.get("chat_history", "")
+        )
+    
+    def __del__(self):
+        """클린업: ThreadPoolExecutor 종료"""
+        if hasattr(self, 'executor'):
+            self.executor.shutdown(wait=False)
