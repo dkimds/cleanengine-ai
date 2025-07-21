@@ -160,14 +160,54 @@ async def cleanup_thread(thread_id: str):
 # 헬스체크 엔드포인트
 @app.get("/health")
 async def health_check():
+    """개선된 헬스체크 - GPU 메모리 상태 포함"""
     memory_threads = memory_manager.get_all_active_threads()
     chain_info = chain_router.get_chain_info()
     
+    # GPU 메모리 상태 추가
+    from chains.vllm_singleton import vllm_singleton
+    gpu_stats = vllm_singleton.get_memory_stats()
+    gpu_config = vllm_singleton.get_gpu_config()
+    
+    # GPU 상태 판단
+    gpu_health = "healthy"
+    warnings = []
+    
+    for gpu_key, stats in gpu_stats.items():
+        if gpu_key.startswith("gpu_"):
+            utilization = stats.get("utilization_percent", 0)
+            if utilization > 90:
+                gpu_health = "warning"
+                warnings.append(f"{gpu_key}: High memory usage ({utilization}%)")
+            elif utilization > 95:
+                gpu_health = "critical"
+                warnings.append(f"{gpu_key}: Critical memory usage ({utilization}%)")
+    
+    # CPU 메모리도 체크
+    cpu_util = gpu_stats.get("cpu", {}).get("utilization_percent", 0)
+    if cpu_util > 85:
+        warnings.append(f"CPU: High memory usage ({cpu_util}%)")
+    
     return {
-        "status": "healthy",
+        "status": "healthy" if gpu_health == "healthy" and not warnings else "warning",
         "timestamp": datetime.now(),
-        "milvus_connected": chain_info["finance"]["milvus_available"],
+        "gpu_health": gpu_health,
+        "warnings": warnings,
+        "memory_stats": gpu_stats,
+        "gpu_config": gpu_config,
+        "milvus_connected": chain_info.get("finance", {}).get("milvus_available", False),
         "active_memory_threads": memory_threads["total_count"],
         "chain_info": chain_info
+    }
+
+@app.get("/admin/gpu")
+async def get_gpu_status():
+    """GPU 상태 상세 조회 (관리자용)"""
+    from chains.vllm_singleton import vllm_singleton
+    
+    return {
+        "memory_stats": vllm_singleton.get_memory_stats(),
+        "gpu_config": vllm_singleton.get_gpu_config(),
+        "timestamp": datetime.now()
     }
 
