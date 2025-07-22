@@ -1,0 +1,54 @@
+graph TD
+    subgraph "User Interaction"
+        U[사용자 질문] --> VC[vLLM 기반 질문 분류기<br/>Pre-screening]
+    end
+    
+    subgraph "Question Classification"
+        VC -->|Category 1<br/>LLM으로 처리할 질문| LLMPATH[고가치 질문 처리 경로]
+        VC -->|Category 2<br/>내부 모듈로 처리할 질문| INTERNAL[저가치/정형 질문 처리 경로]
+    end
+    
+    subgraph "High-Value Questions (LLM Path)"
+        LLMPATH --> MARKET["최신 시장 동향 질문"]
+        LLMPATH --> EXPERT["전문 투자 지식 질문"]
+        MARKET --> TAVILY["Tavily 웹 검색<br/>실시간 시장 정보"]
+        EXPERT --> MILVUS["Milvus 벡터 DB<br/>전문 지식 검색"]
+        TAVILY -->|"최신 시장 데이터"| OA["OpenAI API<br/>GPT-4o mini"]
+        MILVUS -->|"전문 투자 지식"| OA
+        OA --> LR["LLM 응답<br/>고품질/신뢰성 중시"]
+    end
+    
+    subgraph "Low-Value Questions (Internal Module)"
+        INTERNAL --> IR["내부 모듈 응답<br/>룰 기반/FAQ/키워드 매칭<br/>빠르고 저렴"]
+    end
+    
+    LR --> R["최종 답변"]
+    IR --> R
+    
+    subgraph "Monitoring & Analytics"
+        MLF["MLflow Tracking Server"]
+        MLF --> CLASS_MON["분류 정확도 모니터링"]
+        MLF --> COST_MON["비용 절감 효과 추적"]
+        MLF --> QUALITY_MON["답변 품질 모니터링"]
+        VC -->|"분류 결과 로그"| MLF
+        OA -->|"API 호출 비용"| MLF
+        IR -->|"내부 처리 통계"| MLF
+        LR -->|"사용자 피드백"| MLF
+    end
+    
+    style U fill:#add8e6,stroke:#333,stroke-width:2px,color:#000
+    style VC fill:#90ee90,stroke:#333,stroke-width:3px,color:#000
+    style LLMPATH fill:#ffd700,stroke:#333,stroke-width:2px,color:#000
+    style INTERNAL fill:#b0c4de,stroke:#333,stroke-width:2px,color:#000
+    style MARKET fill:#ffcccb,stroke:#333,stroke-width:2px,color:#000
+    style EXPERT fill:#ffcccb,stroke:#333,stroke-width:2px,color:#000
+    style TAVILY fill:#87ceeb,stroke:#333,stroke-width:2px,color:#000
+    style MILVUS fill:#ffb6c1,stroke:#333,stroke-width:2px,color:#000
+    style OA fill:#ffefd5,stroke:#333,stroke-width:2px,color:#000
+    style LR fill:#f0e68c,stroke:#333,stroke-width:2px,color:#000
+    style IR fill:#98fb98,stroke:#333,stroke-width:2px,color:#000
+    style R fill:#98fb98,stroke:#333,stroke-width:3px,color:#000
+    style MLF fill:#afeeee,stroke:#333,stroke-width:2px,color:#000
+    style CLASS_MON fill:#f0e68c,stroke:#333,stroke-width:1px,color:#000
+    style COST_MON fill:#f0e68c,stroke:#333,stroke-width:1px,color:#000
+    style QUALITY_MON fill:#f0e68c,stroke:#333,stroke-width:1px,color:#000
