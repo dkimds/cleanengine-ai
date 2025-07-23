@@ -211,3 +211,36 @@ async def get_gpu_status():
         "timestamp": datetime.now()
     }
 
+@app.get("/admin/performance")
+async def get_performance_stats():
+    """성능 통계 조회 (관리자용)"""
+    try:
+        from modules.performance_monitor import monitor
+        return {
+            "performance": monitor.get_stats(),
+            "system_info": {
+                "timestamp": datetime.now(),
+                "server_status": "running"
+            }
+        }
+    except Exception as e:
+        return {
+            "error": f"Performance monitoring not available: {str(e)}",
+            "timestamp": datetime.now()
+        }
+
+@app.post("/admin/performance/reset")
+async def reset_performance_stats():
+    """성능 통계 초기화 (관리자용)"""
+    try:
+        from modules.performance_monitor import monitor
+        monitor.reset_stats()
+        return {
+            "message": "Performance statistics reset successfully",
+            "timestamp": datetime.now()
+        }
+    except Exception as e:
+        return {
+            "error": f"Could not reset performance stats: {str(e)}",
+            "timestamp": datetime.now()
+        }
