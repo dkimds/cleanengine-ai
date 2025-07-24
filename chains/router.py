@@ -221,10 +221,14 @@ class ChainRouter:
         Returns:
             Dictionary with chain information
         """
+        # 배치 처리 정보 추가
+        batch_info = self.classification_chain.get_batch_info()
+        
         return {
             "classification": {
                 "class": self.classification_chain.__class__.__name__,
-                "model": self.model
+                "model": self.model,
+                "batch_processing": batch_info
             },
             "news": {
                 "class": "NewsChain",
